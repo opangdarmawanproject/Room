@@ -3,8 +3,445 @@
 ## Action
 
 ### URL
+WebFrame_B77CE4EA_A77E_4A80_41C2_B2291D10E597.url = <!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interaktif PERMISI</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.6); /* Latar belakang transparan gelap cocok untuk 3DVista */
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        #instruction {
+            color: #fff;
+            font-size: 18px;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            text-align: center;
+        }
+
+        /* Wadah untuk menyusun huruf (Dropzones) */
+        #target-container {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 50px;
+        }
+
+        .zone {
+            width: 60px;
+            height: 60px;
+            border: 2px dashed #fff;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Huruf-huruf yang berhamburan */
+        .letter {
+            width: 55px;
+            height: 55px;
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);
+            color: #333;
+            font-size: 32px;
+            font-weight: bold;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 8px;
+            cursor: grab;
+            position: absolute;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            transition: transform 0.1s;
+            touch-action: none; /* Penting untuk interaksi mobile/tablet di VR */
+        }
+
+        .letter:active {
+            cursor: grabbing;
+            transform: scale(1.1);
+        }
+
+        .correct {
+            background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%) !important;
+            color: #111;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="instruction">Susun huruf-huruf di bawah ini menjadi kata <b>"PERMISI"</b></div>
+
+    <div id="target-container">
+        <div class="zone" data-letter="P"></div>
+        <div class="zone" data-letter="E"></div>
+        <div class="zone" data-letter="R"></div>
+        <div class="zone" data-letter="M"></div>
+        <div class="zone" data-letter="I"></div>
+        <div class="zone" data-letter="S"></div>
+        <div class="zone" data-letter="I"></div>
+    </div>
+
+    <script>
+        const targetWord = "PERMISI";
+        const targetContainer = document.getElementById('target-container');
+        const zones = document.querySelectorAll('.zone');
+        
+        // Membuat dan mengacak huruf-huruf
+        const lettersArray = targetWord.split('');
+        
+        lettersArray.forEach((char, index) => {
+            const letterEl = document.createElement('div');
+            letterEl.classList.add('letter');
+            letterEl.innerText = char;
+            letterEl.id = `letter-${index}`;
+            document.body.appendChild(letterEl);
+
+            // Mengacak posisi awal huruf di area bawah layar
+            const randomX = Math.random() * (window.innerWidth - 80) + 10;
+            const randomY = Math.random() * (window.innerHeight * 0.3) + (window.innerHeight * 0.6);
+            letterEl.style.left = `${randomX}px`;
+            letterEl.style.top = `${randomY}px`;
+
+            // Menambahkan fungsi Drag & Drop (Mendukung Mouse & Touchscreen)
+            initDrag(letterEl);
+        });
+
+        function initDrag(el) {
+            let currentX, currentY, initialX, initialY;
+            let xOffset = 0, yOffset = 0;
+
+            el.addEventListener('touchstart', dragStart, false);
+            el.addEventListener('touchend', dragEnd, false);
+            el.addEventListener('touchmove', drag, false);
+
+            el.addEventListener('mousedown', dragStart, false);
+            el.addEventListener('mouseup', dragEnd, false);
+            el.addEventListener('mousemove', drag, false);
+
+            function dragStart(e) {
+                if (e.type === "touchstart") {
+                    initialX = e.touches[0].clientX - xOffset;
+                    initialY = e.touches[0].clientY - yOffset;
+                } else {
+                    initialX = e.clientX - xOffset;
+                    initialY = e.clientY - yOffset;
+                }
+                if (e.target === el) {
+                    el.style.zIndex = 1000;
+                }
+            }
+
+            function drag(e) {
+                if (initialX !== undefined) {
+                    e.preventDefault();
+                    if (e.type === "touchmove") {
+                        currentX = e.touches[0].clientX - initialX;
+                        currentY = e.touches[0].clientY - initialY;
+                    } else {
+                        currentX = e.clientX - initialX;
+                        currentY = e.clientY - initialY;
+                    }
+                    xOffset = currentX;
+                    yOffset = currentY;
+                    setTranslate(currentX, currentY, el);
+                }
+            }
+
+            function dragEnd() {
+                initialX = undefined;
+                initialY = undefined;
+                el.style.zIndex = 'auto';
+                checkDrop(el);
+            }
+        }
+
+        function setTranslate(xPos, yPos, el) {
+            el.style.transform = `translate3d(${xPos}px, ${yPos}px, 0)`;
+        }
+
+        // Memeriksa apakah huruf dilepaskan di atas kotak yang benar
+        function checkDrop(el) {
+            const elRect = el.getBoundingClientRect();
+            const elCenterX = elRect.left + elRect.width / 2;
+            const elCenterY = elRect.top + elRect.height / 2;
+
+            zones.forEach(zone => {
+                const zoneRect = zone.getBoundingClientRect();
+                
+                // Cek jika huruf berada di dalam area kotak target
+                if (
+                    elCenterX > zoneRect.left && elCenterX < zoneRect.right &&
+                    elCenterY > zoneRect.top && elCenterY < zoneRect.bottom
+                ) {
+                    // Cek apakah hurufnya cocok dengan target kotak tersebut
+                    if (zone.getAttribute('data-letter') === el.innerText && !zone.classList.contains('filled')) {
+                        
+                        // Kunci huruf ke tengah kotak target
+                        el.style.transform = 'none';
+                        el.style.left = `${zoneRect.left + (zoneRect.width - elRect.width)/2}px`;
+                        el.style.top = `${zoneRect.top + (zoneRect.height - elRect.height)/2}px`;
+                        el.classList.add('correct');
+                        zone.classList.add('filled');
+                        
+                        // Matikan fungsi drag pada huruf yang sudah benar
+                        el.style.pointerEvents = 'none';
+
+                        checkWin();
+                    }
+                }
+            });
+        }
+
+        // Cek jika semua kotak sudah terisi dengan benar
+        function checkWin() {
+            const filledZones = document.querySelectorAll('.zone.filled');
+            if (filledZones.length === zones.length) {
+                document.getElementById('instruction').innerHTML = "<b style='color:#84fab0;'>BERHASIL! Mengalihkan...</b>";
+                
+                // Menunggu 1 detik efek visual sebelum pindah halaman
+                setTimeout(() => {
+                    // Menggunakan top.location agar 3DVista keluar dari iframe web element menuju link tujuan
+                    window.top.location.href = "https://opangdarmawanproject.github.io/OpangDarmawanPage/";
+                }, 1000);
+            }
+        }
+    </script>
+</body>
+</html>
+PopupWebFrameBehaviour_B710CE16_A77B_D980_419D_F3F8C384715E.url = <!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interaktif PERMISI</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.6); /* Latar belakang transparan gelap cocok untuk 3DVista */
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        #instruction {
+            color: #fff;
+            font-size: 18px;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            text-align: center;
+        }
+
+        /* Wadah untuk menyusun huruf (Dropzones) */
+        #target-container {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 50px;
+        }
+
+        .zone {
+            width: 60px;
+            height: 60px;
+            border: 2px dashed #fff;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Huruf-huruf yang berhamburan */
+        .letter {
+            width: 55px;
+            height: 55px;
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);
+            color: #333;
+            font-size: 32px;
+            font-weight: bold;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 8px;
+            cursor: grab;
+            position: absolute;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            transition: transform 0.1s;
+            touch-action: none; /* Penting untuk interaksi mobile/tablet di VR */
+        }
+
+        .letter:active {
+            cursor: grabbing;
+            transform: scale(1.1);
+        }
+
+        .correct {
+            background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%) !important;
+            color: #111;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="instruction">Susun huruf-huruf di bawah ini menjadi kata <b>"PERMISI"</b></div>
+
+    <div id="target-container">
+        <div class="zone" data-letter="P"></div>
+        <div class="zone" data-letter="E"></div>
+        <div class="zone" data-letter="R"></div>
+        <div class="zone" data-letter="M"></div>
+        <div class="zone" data-letter="I"></div>
+        <div class="zone" data-letter="S"></div>
+        <div class="zone" data-letter="I"></div>
+    </div>
+
+    <script>
+        const targetWord = "PERMISI";
+        const targetContainer = document.getElementById('target-container');
+        const zones = document.querySelectorAll('.zone');
+        
+        // Membuat dan mengacak huruf-huruf
+        const lettersArray = targetWord.split('');
+        
+        lettersArray.forEach((char, index) => {
+            const letterEl = document.createElement('div');
+            letterEl.classList.add('letter');
+            letterEl.innerText = char;
+            letterEl.id = `letter-${index}`;
+            document.body.appendChild(letterEl);
+
+            // Mengacak posisi awal huruf di area bawah layar
+            const randomX = Math.random() * (window.innerWidth - 80) + 10;
+            const randomY = Math.random() * (window.innerHeight * 0.3) + (window.innerHeight * 0.6);
+            letterEl.style.left = `${randomX}px`;
+            letterEl.style.top = `${randomY}px`;
+
+            // Menambahkan fungsi Drag & Drop (Mendukung Mouse & Touchscreen)
+            initDrag(letterEl);
+        });
+
+        function initDrag(el) {
+            let currentX, currentY, initialX, initialY;
+            let xOffset = 0, yOffset = 0;
+
+            el.addEventListener('touchstart', dragStart, false);
+            el.addEventListener('touchend', dragEnd, false);
+            el.addEventListener('touchmove', drag, false);
+
+            el.addEventListener('mousedown', dragStart, false);
+            el.addEventListener('mouseup', dragEnd, false);
+            el.addEventListener('mousemove', drag, false);
+
+            function dragStart(e) {
+                if (e.type === "touchstart") {
+                    initialX = e.touches[0].clientX - xOffset;
+                    initialY = e.touches[0].clientY - yOffset;
+                } else {
+                    initialX = e.clientX - xOffset;
+                    initialY = e.clientY - yOffset;
+                }
+                if (e.target === el) {
+                    el.style.zIndex = 1000;
+                }
+            }
+
+            function drag(e) {
+                if (initialX !== undefined) {
+                    e.preventDefault();
+                    if (e.type === "touchmove") {
+                        currentX = e.touches[0].clientX - initialX;
+                        currentY = e.touches[0].clientY - initialY;
+                    } else {
+                        currentX = e.clientX - initialX;
+                        currentY = e.clientY - initialY;
+                    }
+                    xOffset = currentX;
+                    yOffset = currentY;
+                    setTranslate(currentX, currentY, el);
+                }
+            }
+
+            function dragEnd() {
+                initialX = undefined;
+                initialY = undefined;
+                el.style.zIndex = 'auto';
+                checkDrop(el);
+            }
+        }
+
+        function setTranslate(xPos, yPos, el) {
+            el.style.transform = `translate3d(${xPos}px, ${yPos}px, 0)`;
+        }
+
+        // Memeriksa apakah huruf dilepaskan di atas kotak yang benar
+        function checkDrop(el) {
+            const elRect = el.getBoundingClientRect();
+            const elCenterX = elRect.left + elRect.width / 2;
+            const elCenterY = elRect.top + elRect.height / 2;
+
+            zones.forEach(zone => {
+                const zoneRect = zone.getBoundingClientRect();
+                
+                // Cek jika huruf berada di dalam area kotak target
+                if (
+                    elCenterX > zoneRect.left && elCenterX < zoneRect.right &&
+                    elCenterY > zoneRect.top && elCenterY < zoneRect.bottom
+                ) {
+                    // Cek apakah hurufnya cocok dengan target kotak tersebut
+                    if (zone.getAttribute('data-letter') === el.innerText && !zone.classList.contains('filled')) {
+                        
+                        // Kunci huruf ke tengah kotak target
+                        el.style.transform = 'none';
+                        el.style.left = `${zoneRect.left + (zoneRect.width - elRect.width)/2}px`;
+                        el.style.top = `${zoneRect.top + (zoneRect.height - elRect.height)/2}px`;
+                        el.classList.add('correct');
+                        zone.classList.add('filled');
+                        
+                        // Matikan fungsi drag pada huruf yang sudah benar
+                        el.style.pointerEvents = 'none';
+
+                        checkWin();
+                    }
+                }
+            });
+        }
+
+        // Cek jika semua kotak sudah terisi dengan benar
+        function checkWin() {
+            const filledZones = document.querySelectorAll('.zone.filled');
+            if (filledZones.length === zones.length) {
+                document.getElementById('instruction').innerHTML = "<b style='color:#84fab0;'>BERHASIL! Mengalihkan...</b>";
+                
+                // Menunggu 1 detik efek visual sebelum pindah halaman
+                setTimeout(() => {
+                    // Menggunakan top.location agar 3DVista keluar dari iframe web element menuju link tujuan
+                    window.top.location.href = "https://opangdarmawanproject.github.io/OpangDarmawanPage/";
+                }, 1000);
+            }
+        }
+    </script>
+</body>
+</html>
 PopupWebFrameBehaviour_33CD595D_2360_8D28_41BD_CE980FBC1EA8.url = https://ai.studio/apps/fae4ea45-7a00-4b5c-9b14-8f39b0bee370
-PopupWebFrameBehaviour_B718D317_A70A_4F80_41CC_CD34126FE53E.url = nama_file_game_anda.html
 
 ## Media
 
